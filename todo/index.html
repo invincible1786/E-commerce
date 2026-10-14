@@ -9,11 +9,110 @@
 <body>
     <div class="container">
         <div class="heading">TODO App</div>
-        <form>
-            <input type="text" id="form" placeholder="Enter your tasks" required>
-            <button id="sub">Submit</button>
+        
+        <!-- Added id="todoForm" and changed input id to "todoInput" -->
+        <form id="todoForm">
+            <input type="text" id="todoInput" placeholder="Enter your tasks" required>
+            <button id="sub" type="submit">Submit</button>
         </form>
+
+        <!-- Added the missing ul element that your JS uses to render todos -->
+        <ul id="todoList"></ul>
     </div>
+
+    <!-- Script goes here -->
+    <script>
+        const todoForm = document.getElementById('todoForm');
+        const todoInput = document.getElementById('todoInput');
+        const todoList = document.getElementById('todoList');
+
+        const API_URL = 'http://localhost:3000/todos';
+
+        // 1. Fetch and render todos from Express backend
+        async function fetchTodos() {
+            try {
+                const response = await fetch(API_URL);
+                const todos = await response.json();
+                renderTodos(todos);
+            } catch (error) {
+                console.error('Failed to fetch todos:', error);
+            }
+        }
+
+        function renderTodos(todos) {
+            todoList.innerHTML = '';
+
+            if (!Array.isArray(todos) || todos.length === 0) {
+                todoList.innerHTML = `<li class="empty-state">All caught up! Time to relax. ☕</li>`;
+                return;
+            }
+
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+                
+                li.innerHTML = `
+                    <div class="todo-content" onclick="toggleTodo(${todo.id}, ${!todo.completed})">
+                        <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodo(${todo.id}, ${!todo.completed})">
+                        <span>${todo.title}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTodo(${todo.id})">&times;</button>
+                `;
+                
+                todoList.appendChild(li);
+            });
+        }
+
+        // 2. Add a new todo (POST request to Express)
+        todoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const titleText = todoInput.value.trim();
+            if(!titleText) return;
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: titleText })
+                });
+
+                todoInput.value = '';
+                fetchTodos(); // Refresh the list from the server
+            } catch (error) {
+                console.error('Failed to add todo:', error);
+            }
+        });
+
+        // 3. Toggle completion status (PATCH request to Express)
+        async function toggleTodo(id, currentStatus) {
+            try {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: currentStatus })
+                });
+
+                fetchTodos(); // Refresh the list from the server
+            } catch (error) {
+                console.error('Failed to update todo:', error);
+            }
+        }
+
+        // 4. Delete todo (DELETE request to Express)
+        async function deleteTodo(id) {
+            try {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+
+                fetchTodos(); // Refresh the list from the server
+            } catch (error) {
+                console.error('Failed to delete todo:', error);
+            }
+        }
+
+        // Load todos when the page opens
+        fetchTodos();
+    </script>
 </body>
-<script src="index.js"></script>
 </html>
