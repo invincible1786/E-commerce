@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo App</title>
+    <!-- Connected external CSS file -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -53,35 +55,45 @@
         render_todo();
         } catch (error) {
             console.error("Can't delete the todo");
-        }     
+        }    
     }
-
 
     async function render_todo(){
         const todos = await fetch_todo();
         list.innerHTML = "";
 
-        if(todos.length === 0) list.innerHTML = "Machax !!";
-
+        if(todos.length === 0) {
+            list.innerHTML = `<div class="empty-state">Machax !!</div>`;
+        }
         else{
             todos.forEach(ele => {
-                const item = document.createElement('li')
+                const item = document.createElement('li');
+                item.className = 'todo-item'; // Added class for item styling
+                if(ele.completed) {
+                    item.classList.add('completed');
+                }
 
-                const tt = document.createElement('span');
-                tt.textContent = ele.title; 
-                if(ele.completed) tt.style.textDecoration = 'line-through';
+                // Wrapper for checkbox and text
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'todo-content';
 
                 const check = document.createElement('input');
                 check.type = 'checkbox';
                 check.checked = ele.completed;
                 check.addEventListener('change', () => toggleTodo(ele.id));
 
+                const tt = document.createElement('span');
+                tt.textContent = ele.title; 
+
                 const bye = document.createElement('button');
-                bye.textContent = "Delete";
+                bye.textContent = "×"; // Using standard icon text or you can keep "Delete"
+                bye.className = 'delete-btn'; // Added class for delete button styling
                 bye.addEventListener('click', ()=>deleteTodo(ele.id));
 
-                item.appendChild(check);                
-                item.appendChild(tt);                
+                contentDiv.appendChild(check);                
+                contentDiv.appendChild(tt);                
+                
+                item.appendChild(contentDiv); 
                 item.appendChild(bye);                
                 list.appendChild(item);
             });
@@ -106,12 +118,11 @@
                 });
                 render_todo();
                 input.value = "";
-            } catch (error) {   
+            } catch (error) { 
                 console.error("Failed to add the todo", error);
             }
         }
     })
     render_todo();
-
 </script>
 </html>
