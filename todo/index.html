@@ -4,115 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo App</title>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <div class="heading">TODO App</div>
-        
-        <!-- Added id="todoForm" and changed input id to "todoInput" -->
-        <form id="todoForm">
-            <input type="text" id="todoInput" placeholder="Enter your tasks" required>
-            <button id="sub" type="submit">Submit</button>
+        <div class="heading">TODO-APP</div>
+        <form id="todoform">
+            <input type="text" id="todoinput" placeholder="Whatcha u upto ?" required>
+            <button id="sub" type="submit">SUBMIT</button>
         </form>
-
-        <!-- Added the missing ul element that your JS uses to render todos -->
-        <ul id="todoList"></ul>
+        <ul id="todolist"></ul>
     </div>
+</body>
+<script>
+    const btn = document.getElementById("sub");
+    const input = document.getElementById("todoinput");
+    const list = document.getElementById("todolist");
 
-    <!-- Script goes here -->
-    <script>
-        const todoForm = document.getElementById('todoForm');
-        const todoInput = document.getElementById('todoInput');
-        const todoList = document.getElementById('todoList');
+    const API = "http://localhost:3000/todos";
 
-        const API_URL = 'http://localhost:3000/todos';
-
-        // 1. Fetch and render todos from Express backend
-        async function fetchTodos() {
-            try {
-                const response = await fetch(API_URL);
-                const todos = await response.json();
-                renderTodos(todos);
-            } catch (error) {
-                console.error('Failed to fetch todos:', error);
-            }
+    async function fetch_todo() {
+        try {
+            const response = await fetch(API);
+            const todos = await response.json();
+            return todos;
         }
+        catch (error) {
+            console.log("Failed to fetch the todos:", error);
+            return [];
+        }
+    }
 
-        function renderTodos(todos) {
-            todoList.innerHTML = '';
+    async function toggleTodo(id) {
+        try {
+            await fetch(`${API}/${id}`, {
+                method: 'PATCH',
+            });
+            render_todo(); 
+        } catch (error) {
+            console.error("Can't update the todo status", error);
+        }
+    }
 
-            if (!Array.isArray(todos) || todos.length === 0) {
-                todoList.innerHTML = `<li class="empty-state">All caught up! Time to relax. ☕</li>`;
-                return;
-            }
+    async function deleteTodo(id){
+        try {
+            await fetch(`${API}/${id}`, {
+            method: 'DELETE'
+        });
+        render_todo();
+        } catch (error) {
+            console.error("Can't delete the todo");
+        }     
+    }
 
-            todos.forEach(todo => {
-                const li = document.createElement('li');
-                li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-                
-                li.innerHTML = `
-                    <div class="todo-content" onclick="toggleTodo(${todo.id}, ${!todo.completed})">
-                        <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodo(${todo.id}, ${!todo.completed})">
-                        <span>${todo.title}</span>
-                    </div>
-                    <button class="delete-btn" onclick="deleteTodo(${todo.id})">&times;</button>
-                `;
-                
-                todoList.appendChild(li);
+
+    async function render_todo(){
+        const todos = await fetch_todo();
+        list.innerHTML = "";
+
+        if(todos.length === 0) list.innerHTML = "Machax !!";
+
+        else{
+            todos.forEach(ele => {
+                const item = document.createElement('li')
+
+                const tt = document.createElement('span');
+                tt.textContent = ele.title; 
+                if(ele.completed) tt.style.textDecoration = 'line-through';
+
+                const check = document.createElement('input');
+                check.type = 'checkbox';
+                check.checked = ele.completed;
+                check.addEventListener('change', () => toggleTodo(ele.id));
+
+                const bye = document.createElement('button');
+                bye.textContent = "Delete";
+                bye.addEventListener('click', ()=>deleteTodo(ele.id));
+
+                item.appendChild(check);                
+                item.appendChild(tt);                
+                item.appendChild(bye);                
+                list.appendChild(item);
             });
         }
+    }
 
-        // 2. Add a new todo (POST request to Express)
-        todoForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const titleText = todoInput.value.trim();
-            if(!titleText) return;
+    btn.addEventListener("click",async (e)=>{
+        e.preventDefault();
+        const txt = input.value.trim();
 
+        if(txt == ""){
+            alert("Title is required");
+        }
+        else{
             try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: titleText })
+                await fetch(API, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title: txt })
                 });
-
-                todoInput.value = '';
-                fetchTodos(); // Refresh the list from the server
-            } catch (error) {
-                console.error('Failed to add todo:', error);
-            }
-        });
-
-        // 3. Toggle completion status (PATCH request to Express)
-        async function toggleTodo(id, currentStatus) {
-            try {
-                await fetch(`${API_URL}/${id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ completed: currentStatus })
-                });
-
-                fetchTodos(); // Refresh the list from the server
-            } catch (error) {
-                console.error('Failed to update todo:', error);
+                render_todo();
+                input.value = "";
+            } catch (error) {   
+                console.error("Failed to add the todo", error);
             }
         }
+    })
+    render_todo();
 
-        // 4. Delete todo (DELETE request to Express)
-        async function deleteTodo(id) {
-            try {
-                await fetch(`${API_URL}/${id}`, {
-                    method: 'DELETE'
-                });
-
-                fetchTodos(); // Refresh the list from the server
-            } catch (error) {
-                console.error('Failed to delete todo:', error);
-            }
-        }
-
-        // Load todos when the page opens
-        fetchTodos();
-    </script>
-</body>
+</script>
 </html>
